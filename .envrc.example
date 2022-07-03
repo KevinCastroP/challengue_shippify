@@ -1,0 +1,7 @@
+##########################################################
+#       REMEMBER REPLACE FOR CORRECT CURRENT VALUES
+##########################################################
+
+export HTTP_PORT=3000
+export HOST='0.0.0.0'
+export X_API_KEY='x-api-key'

@@ -53,6 +53,12 @@ Follow the steps below to run the service in your local environment:
 
 - Send request
 
+Follow the steps below to run the service in a Docker container:
+
+- ```docker build -t shippify .```
+- ```docker run shippify```
+- Send request
+
 ## Author
 
 * Kevin Castro

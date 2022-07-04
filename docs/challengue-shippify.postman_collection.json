@@ -1,0 +1,38 @@
+{
+	"info": {
+		"_postman_id": "508a5197-dde2-448b-a588-93ea4b23e3e5",
+		"name": "challengue-shippify",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "routes",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "shippify",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"maximun_distance\": 1000,\n    \"considerer_traffic\": true,\n    \"plot\": false,\n    \"maximun_distance_between_points\": 100\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/generate_route",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"generate_route"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

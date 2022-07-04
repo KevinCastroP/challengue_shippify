@@ -8,7 +8,7 @@ const {
 } = require('../../utils/utils');
 
 
-const validator = async function (body) {
+const routeProcessor = async function (body) {
     try {
         // Extract data from request body
         const maxDistance = body.maximun_distance
@@ -19,7 +19,7 @@ const validator = async function (body) {
         // Get deliveries from payload json file
         const deliveries = await getData()
         // Filter deliveries by max distance between points
-        const filteredDeliveries = await filterByDistanceBetweenPoints(deliveries, maxDistBetweenPoints)
+        let filteredDeliveries = await filterByDistanceBetweenPoints(deliveries, maxDistBetweenPoints)
 
         // Sort deliveries by traffic if is required
         if (traffic) {
@@ -28,57 +28,18 @@ const validator = async function (body) {
             })
         }
 
-        // Get valid deliveries per parameters
-        let sumMaxDistance = 0
+        // Get all valid deliveries
+        let pointsRoute = await getDeliveries(filteredDeliveries, maxDistance)
 
-        const pointsRoute = []
-        pointsRoute.push(filteredDeliveries.shift())
-        sumMaxDistance += pointsRoute[0].distance
-
-        let i = 0
-        
-        while (sumMaxDistance < maxDistance && i < pointsRoute.length) {
-            const nextPos = await nextPosition(pointsRoute[i].delivery_location, filteredDeliveries)
-            if (filteredDeliveries[nextPos[2]].distance) {
-                sumMaxDistance += filteredDeliveries[nextPos[2]].distance
-                if (sumMaxDistance <= maxDistance) {
-                    pointsRoute.push(nextPos[1])
-                    i += 1
-                    filteredDeliveries.splice(nextPos[2], 1)
-                }
-            } else {
-                break
-            }
-        }
-
-        // Create the route from valid deliveries per parameters
-        const steps = []
-
-        pointsRoute.forEach(delivery => {
-            steps.push({
-                point: delivery.pickup_location,
-                id: delivery.id
-            })
-            steps.push({
-                point: delivery.delivery_location,
-                id: delivery.id
-            })
-        })
-
-        // Delete duplicate steps
-        const filterSteps = steps.filter((step, index) => {
-            if (index > 0) {
-                return JSON.stringify(step.point) !== JSON.stringify(steps[index - 1].point)
-            } else {
-                return true
-            }
-        })
+        // Create route
+        const filterSteps = await createRoute(pointsRoute)
 
         // Validate amount of deliveries to create a route and send the response
-        if (pointsRoute.length >= 2) {
+        if (filterSteps.length >= 2) {
             const resultProcess = {
                 routeId: uuidv4(),
                 maximun_distance: pointsRoute.reduce((acc, cur) => acc + cur.distance, 0),
+                considerer_traffic: traffic,
                 number_of_steps: filterSteps.length,
                 steps: filterSteps
             }
@@ -125,26 +86,80 @@ async function filterByDistanceBetweenPoints(deliveries, maxDistBetweenPoints) {
 
 async function nextPosition(initPoint, filteredDeliveries) {
     // Calculate the next near position and distance
-    let nextPosition = [
-        9999999,
-        filteredDeliveries[0],
-        0
-    ]
+    let nextPosition = {
+        distance: -1,
+        nextDelivery: filteredDeliveries[0],
+        index: 0 
+    }
 
     for (let i = 0; i < filteredDeliveries.length; i++) {
         const nextDelivery = filteredDeliveries[i]
         let distance = calculateDistance(initPoint, nextDelivery.pickup_location)
 
-        if (distance < nextPosition[0]) {
-            nextPosition[0] = distance
-            nextPosition[1] = nextDelivery
-            nextPosition[2] = i
+        if (distance < nextPosition.distance || nextPosition.distance === -1) {
+            nextPosition.distance = distance
+            nextPosition.nextDelivery = nextDelivery
+            nextPosition.index = i
         }
     }
     return nextPosition
 }
 
 
+async function getDeliveries(filteredDeliveries, maxDistance) {
+    // Get valid deliveries per parameters
+    let sumMaxDistance = 0
+
+    let pointsRoute = []
+    pointsRoute.push(filteredDeliveries.shift())
+    sumMaxDistance += pointsRoute[0].distance
+
+    let i = 0
+
+    while (sumMaxDistance < maxDistance && i < pointsRoute.length) {
+        const nextPos = await nextPosition(pointsRoute[i].delivery_location, filteredDeliveries)
+        if (filteredDeliveries[nextPos.index].distance) {
+            sumMaxDistance += filteredDeliveries[nextPos.index].distance
+            if (sumMaxDistance <= maxDistance) {
+                pointsRoute.push(nextPos.nextDelivery)
+                i += 1
+                filteredDeliveries.splice(nextPos.index, 1)
+            }
+        } else {
+            break
+        }
+    }
+    return pointsRoute
+}
+
+
+async function createRoute(pointsRoute) {
+    // Create the route from valid deliveries per parameters
+    let steps = []
+
+    pointsRoute.forEach(delivery => {
+        steps.push({
+            point: delivery.pickup_location,
+            id: delivery.id
+        })
+        steps.push({
+            point: delivery.delivery_location,
+            id: delivery.id
+        })
+    })
+
+    // Delete duplicate steps
+    const filterSteps = steps.filter((step, index) => {
+        if (index > 0) {
+            return JSON.stringify(step.point) !== JSON.stringify(steps[index - 1].point)
+        } else {
+            return true
+        }
+    })
+    return filterSteps
+}
+
+
 module.exports = {
-    validator
+    routeProcessor
 }

@@ -3,7 +3,7 @@ const {
 } = require('./src/config/index');
 
 const {
-    validator
+    routeProcessor
 } = require('./src/routes/index');
 
 const fastify = require('fastify')();
@@ -23,9 +23,10 @@ fastify.post('/generate_route', async (request, reply) => {
     }
 
     const body = JSON.parse(request.body)
-    const resultValidator = await validator(body)
+    const resultValidator = await routeProcessor(body)
 
     if (resultValidator.code === 200) {
+        console.log("Route generated successfully")
         reply.send({
             data: resultValidator,
             success: true,

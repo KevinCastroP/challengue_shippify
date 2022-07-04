@@ -32,7 +32,7 @@ fastify.post('/generate_route', async (request, reply) => {
             message: "Route generated successfully"
         })
     } else {
-        reply.statusCode = 204
+        reply.statusCode = 400
         console.log("It's not possible to create a route with the parameters received")
         reply.send({
             data: null,
